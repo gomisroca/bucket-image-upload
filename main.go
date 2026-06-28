@@ -17,10 +17,15 @@ func main() {
 		log.Fatalf("Failed to initialize storage: %v", err)
 	}
 
+	// uploadHandler := handlers.NewUploadHandler(store, cfg.MaxUploadBytes)
+	filesHandler := handlers.NewFilesHandler(store)
 	
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", handlers.Health)
-
+	// mux.Handle("POST /upload", uploadHandler)
+	mux.Handle("GET /files/{key}", filesHandler)
+	// Static file serving, local storage only
+	mux.Handle("GET /uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(cfg.UploadDir))))
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
