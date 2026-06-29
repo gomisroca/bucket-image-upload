@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Image Upload Service — Demo</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 720px;
+        margin: 40px auto;
+        color: #1a1a1a;
+      }
+      h1 {
+        font-size: 1.4rem;
+      }
+      #drop {
+        border: 2px dashed #999;
+        border-radius: 10px;
+        padding: 40px;
+        text-align: center;
+        color: #666;
+        cursor: pointer;
+        transition: border-color 0.15s;
+      }
+      #drop.drag {
+        border-color: #2563eb;
+        color: #2563eb;
+      }
+      input[type="file"] {
+        display: none;
+      }
+      #results {
+        margin-top: 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .card {
+        border: 1px solid #e5e5e5;
+        border-radius: 8px;
+        padding: 16px;
+      }
+      .thumbs {
+        display: flex;
+        gap: 12px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+      }
+      .thumbs figure {
+        margin: 0;
+        text-align: center;
+        font-size: 12px;
+        color: #666;
+      }
+      .thumbs img {
+        display: block;
+        border-radius: 6px;
+        max-width: 160px;
+        max-height: 160px;
+      }
+      pre {
+        background: #f5f5f5;
+        padding: 10px;
+        border-radius: 6px;
+        overflow-x: auto;
+        font-size: 12px;
+      }
+      #status {
+        margin-top: 10px;
+        font-size: 14px;
+        color: #b91c1c;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>image-upload-service — test page</h1>
+    <p>
+      Drop an image (JPEG/PNG) below or click to choose one. It's sent to
+      <code>POST /upload</code>.
+    </p>
+
+    <label
+      for="apiKey"
+      style="display: block; font-size: 13px; color: #555; margin-bottom: 4px"
+    >
+      API key (only needed if this deployment has <code>API_KEY</code> set):
+    </label>
+    <input
+      id="apiKey"
+      type="text"
+      placeholder="leave blank if not required"
+      style="
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 16px;
+        box-sizing: border-box;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+      "
+    />
+
+    <div id="drop">Drop image here, or click to browse</div>
+    <input type="file" id="fileInput" accept="image/jpeg,image/png" />
+    <div id="status"></div>
+    <div id="results"></div>
+
+    <script>
+      const drop = document.getElementById("drop");
+      const fileInput = document.getElementById("fileInput");
+      const results = document.getElementById("results");
+      const status = document.getElementById("status");
+
+      drop.addEventListener("click", () => fileInput.click());
+      drop.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        drop.classList.add("drag");
+      });
+      drop.addEventListener("dragleave", () => drop.classList.remove("drag"));
+      drop.addEventListener("drop", (e) => {
+        e.preventDefault();
+        drop.classList.remove("drag");
+        if (e.dataTransfer.files.length) upload(e.dataTransfer.files[0]);
+      });
+      fileInput.addEventListener("change", () => {
+        if (fileInput.files.length) upload(fileInput.files[0]);
+      });
+
+      async function upload(file) {
+        status.textContent = "";
+        const form = new FormData();
+        form.append("image", file);
+
+        const apiKey = document.getElementById("apiKey").value.trim();
+        const headers = apiKey ? { "X-API-Key": apiKey } : {};
+
+        try {
+          const res = await fetch("/upload", {
+            method: "POST",
+            headers,
+            body: form,
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "upload failed");
+          renderResult(data);
+        } catch (err) {
+          status.textContent = "Error: " + err.message;
+        }
+      }
+
+      function renderResult(data) {
+        const card = document.createElement("div");
+        card.className = "card";
+
+        const thumbsHtml = Object.entries(data.thumbnails)
+          .map(
+            ([name, url]) =>
+              `<figure><img src="${url}" alt="${name}"><figcaption>${name}</figcaption></figure>`,
+          )
+          .join("");
+
+        card.innerHTML = `
+        <strong>${data.width}×${data.height}</strong> · ${data.contentType} · id: ${data.id}
+        <div class="thumbs">
+          <figure><img src="${data.original}" alt="original"><figcaption>original</figcaption></figure>
+          ${thumbsHtml}
+        </div>
+        <pre>${JSON.stringify(data, null, 2)}</pre>
+      `;
+        results.prepend(card);
+      }
+    </script>
+  </body>
+</html>
