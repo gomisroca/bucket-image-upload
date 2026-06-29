@@ -28,7 +28,3 @@ func (h *FilesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, url, http.StatusFound)
 }
-
-func writeError(w http.ResponseWriter, status int, msg string) {
-	writeJSON(w, status, map[string]string{"error": msg})
-}
