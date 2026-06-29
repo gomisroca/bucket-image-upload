@@ -10,6 +10,8 @@ type Config struct {
 	Port string // e.g. "8080"
 	MaxUploadBytes int64 // e.g. 10<<20 // 10 MB
 
+	APIKey string
+
 	StorageBackend string
 	UploadDir string // used when StorageBackend is "local"
 
@@ -27,6 +29,7 @@ func Load() Config {
 	cfg := Config{
 		Port:           getEnv("PORT", "8080"),
 		MaxUploadBytes: getEnvInt64("MAX_UPLOAD_BYTES", 10<<20), // 10 MB default
+		APIKey:         getEnv("API_KEY", ""),
 
 		StorageBackend: getEnv("STORAGE_BACKEND", "local"),
 		UploadDir:      getEnv("UPLOAD_DIR", "./uploads"),

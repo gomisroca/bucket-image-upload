@@ -3,6 +3,7 @@ package main
 import (
 	"bucket-image-upload/internal/config"
 	"bucket-image-upload/internal/handlers"
+	"bucket-image-upload/internal/middleware"
 	"bucket-image-upload/internal/storage"
 	"log"
 	"net/http"
@@ -17,15 +18,21 @@ func main() {
 		log.Fatalf("Failed to initialize storage: %v", err)
 	}
 
-	// uploadHandler := handlers.NewUploadHandler(store, cfg.MaxUploadBytes)
+	uploadHandler := handlers.NewUploadHandler(store, cfg.MaxUploadBytes)
 	filesHandler := handlers.NewFilesHandler(store)
 	
+	if cfg.APIKey == "" {
+		log.Println("WARNING: API_KEY is not set - POST '/upload' is open to anyone who can reach this service. Set API_KEY before deploying publicly.")
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", handlers.Health)
-	// mux.Handle("POST /upload", uploadHandler)
+	mux.Handle("POST /upload", middleware.RequireAPIKey(cfg.APIKey, uploadHandler))
 	mux.Handle("GET /files/{key}", filesHandler)
 	// Static file serving, local storage only
 	mux.Handle("GET /uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(cfg.UploadDir))))
+  	// Test page
+	mux.Handle("GET /", http.FileServer(http.Dir("./web")))
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
