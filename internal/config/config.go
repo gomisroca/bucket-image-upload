@@ -23,6 +23,10 @@ type Config struct {
 	S3SecretKey     string
 	S3PublicBaseURL string
 	S3PresignTTL    time.Duration
+
+	RateLimiterURL string
+	RateLimiterAPIKey string
+	RateLimiterFailOpen bool
 }
 
 func Load() Config {
@@ -41,6 +45,10 @@ func Load() Config {
 		S3SecretKey:     getEnv("S3_SECRET_ACCESS_KEY", ""),
 		S3PublicBaseURL: getEnv("S3_PUBLIC_BASE_URL", ""),
 		S3PresignTTL:    time.Duration(getEnvInt64("S3_PRESIGN_TTL_SECONDS", 3600)) * time.Second,
+
+		RateLimiterURL:      getEnv("RATELIMITER_URL", ""),
+		RateLimiterAPIKey:   getEnv("RATELIMITER_API_KEY", ""),
+		RateLimiterFailOpen: getEnvBool("RATELIMITER_FAIL_OPEN", true),
 	}
 	return cfg
 }
@@ -56,6 +64,15 @@ func getEnvInt64(key string, fallback int64) int64 {
 	if v := os.Getenv(key); v != "" {
 		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
 			return n
+		}
+	}
+	return fallback
+}
+
+func getEnvBool(key string, fallback bool) bool {
+	if v := os.Getenv(key); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			return b
 		}
 	}
 	return fallback

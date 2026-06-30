@@ -24,10 +24,16 @@ func main() {
 	if cfg.APIKey == "" {
 		log.Println("WARNING: API_KEY is not set - POST '/upload' is open to anyone who can reach this service. Set API_KEY before deploying publicly.")
 	}
+	if cfg.RateLimiterURL == "" {
+		log.Println("NOTE: RATELIMITER_URL is not set - '/upload' has no rate limiting of its own; it relies entirely on whatever calls it to enforce limits upstream.")
+	}
+
+	limiterClient := middleware.NewLimiterClient()
+	protectedUpload := middleware.RequireAPIKey(cfg.APIKey, middleware.RequireRateLimit(limiterClient, cfg.RateLimiterURL, cfg.RateLimiterAPIKey, cfg.RateLimiterFailOpen, uploadHandler))
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", handlers.Health)
-	mux.Handle("POST /upload", middleware.RequireAPIKey(cfg.APIKey, uploadHandler))
+	mux.Handle("POST /upload", protectedUpload)
 	mux.Handle("GET /files/{key}", filesHandler)
 	// Static file serving, local storage only
 	mux.Handle("GET /uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(cfg.UploadDir))))
